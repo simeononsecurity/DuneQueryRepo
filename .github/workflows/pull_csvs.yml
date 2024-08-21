@@ -1,0 +1,38 @@
+name: Sync CSV Files
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every 24 hours
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  sync-csv:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
+        fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
+
+    - name: Fetch CSV files from track-openroaming-passpoint repository
+      run: |
+        mkdir -p uploads
+        curl -L https://raw.githubusercontent.com/simeononsecurity/track-openroaming-passpoint/main/data/categories_counts.csv -o uploads/categories_counts.csv
+        curl -L https://raw.githubusercontent.com/simeononsecurity/track-openroaming-passpoint/main/data/common_ssids.csv -o uploads/common_ssids.csv
+        curl -L https://raw.githubusercontent.com/simeononsecurity/track-openroaming-passpoint/main/data/rcoi_counts.csv -o uploads/rcoi_counts.csv
+
+    - name: Commit and push CSV files
+      run: |
+        git config user.name "${{ secrets.USERNAME }}"
+        git config user.email "${{ secrets.EMAIL }}"
+        git add uploads/
+        git commit -m "Sync CSV files from track-openroaming-passpoint"
+
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        branch: ${{ github.ref }}
+
